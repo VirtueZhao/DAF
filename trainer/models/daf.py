@@ -6,9 +6,9 @@ from tabulate import tabulate
 from torch.nn import functional as F
 from tqdm import tqdm
 
-import wandb  # noqa
+# import wandb  # noqa
 
-# from ops import compute_perturbation_weight, measure_diversity
+from ops import compute_perturbation_weight, measure_diversity
 from optim import build_lr_scheduler, build_optimizer
 from trainer import MODEL_REGISTRY, Trainer
 from utils.fcn import build_network
@@ -133,28 +133,28 @@ class DAF(Trainer):
     def forward_backward(self, batch_data):
         input_data, class_label, domain_label = self.parse_batch_train(batch_data)
 
-        # if self.current_epoch + 1 <= 5:
-        #     loss_class_classifier = F.cross_entropy(
-        #         self.class_classifier(input_data), class_label
-        #     )
-        #     self.model_backward_and_update(loss_class_classifier, "class_classifier")
-        #     loss_summary = {"loss_class_classifier": loss_class_classifier.item()}
+        if self.current_epoch + 1 <= 5:
+            loss_class_classifier = F.cross_entropy(
+                self.class_classifier(input_data), class_label
+            )
+            self.model_backward_and_update(loss_class_classifier, "class_classifier")
+            loss_summary = {"loss_class_classifier": loss_class_classifier.item()}
 
-        #     if self.batch_idx + 1 == self.num_batches:
-        #         self.update_lr()
+            if self.batch_idx + 1 == self.num_batches:
+                self.update_lr()
 
-        #     return loss_summary
+            return loss_summary
 
         # Compute Diversity and Dynamic Lambda
-        # with torch.no_grad():
-        #     embeddings = self.class_classifier.forward_features(input_data)
-        #     embeddings_normalized = (embeddings - torch.min(embeddings)) / (
-        #         torch.max(embeddings) - torch.min(embeddings)
-        #     )
-        #     embeddings_diversity = measure_diversity(
-        #         embeddings_normalized.cpu(), diversity_type="gini"
-        #     )
-        #     self.lmda = compute_perturbation_weight(embeddings_diversity)
+        with torch.no_grad():
+            embeddings = self.class_classifier.forward_features(input_data)
+            embeddings_normalized = (embeddings - torch.min(embeddings)) / (
+                torch.max(embeddings) - torch.min(embeddings)
+            )
+            embeddings_diversity = measure_diversity(
+                embeddings_normalized.cpu(), diversity_type="gini"
+            )
+            self.lmda = compute_perturbation_weight(embeddings_diversity)
 
         ############
         # Update DoTNet - Domain Generator Net
